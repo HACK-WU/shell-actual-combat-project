@@ -195,9 +195,6 @@ function cpu_top10 {
 		fi
 	done
 }
-function mem_top10 {
-	echo ""
-}
 function traffic {
 		#查看网路流量
 	while :
@@ -226,7 +223,7 @@ function traffic {
 while :
 do
 	echo ""
-	select  input in  cpu_load disk_use disk_inode disk_load mem_use  tcp_status cpu_top10 mem_top10 traffic quit
+	select  input in  cpu_load disk_use disk_inode disk_load mem_use  tcp_status cpu_top10  traffic quit
 	do
 		case $input in 
 			cpu_load) cpu_load ; break  ;;	#调用函数
