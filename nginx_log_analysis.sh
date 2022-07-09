@@ -52,6 +52,7 @@ function daily_pv {				#统计指定日期的PV量
 			local result=$(grep "$date" $log_path|awk '{ips[$1]++} END{num=1;for(ip in ips)if(num<='''$top_num'''){print ip,ips[ip];num++}}' | sort -k2 -rn)
 			[ "$num" -eq 1 ] && echo -e "今日截止$date:$(date +"%T")访问最多的几个ip是:\n$result"  
             [ "$num" -eq 2 ] && echo -e "$date 这个时刻,访问最多的几个ip是:\n$result"
+			return 0
 		fi
 		
 		if [[ "$command_type" =~ "ip" && "$num" -eq 3  ]];then
@@ -60,6 +61,7 @@ function daily_pv {				#统计指定日期的PV量
 				END{num=1; for(ip in ips)if(num<='''$top_num'''){ print ip,ips[ip];num++}}
 				' $log_path  |sort -k2 -rn)
         	echo  -e "从$start_date到$end_date访问最多的几个ip是：\n$result"            
+			return 0
         fi	
 
 	}
