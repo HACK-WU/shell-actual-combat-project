@@ -3,6 +3,13 @@
 # 2022/7/9
 # Nginx 日志分析
 
+# 用法示例：
+# pv(ip) 				：默认查询当日pv量或者查询的ip的访问次数
+# pv(ip) 09/Jul/2022	: 查询09/Jul/2022 这一天的Pv量,或者查询ip的访问次数
+# pv 09/Jul/2022 10/Jul/2022	:查询9号到10号这之间的,或者查询ip的访问次数
+# ip10 	:表示查询当日访问次数最多的前10个IP,具体的数字可以任意指定
+# ip100 09/Jul/2022 :查询这一天的，访问次数最多的前100个ip
+
 set -u
 log_path=/var/log/nginx/access.log
 function changeToENG {
@@ -28,24 +35,29 @@ function daily_pv {				#统计指定日期的PV量
 			local count=$(grep "$date" $log_path|wc -l)
 			[ "$num" -eq 1 ] && echo "今日截止$date:$(date +"%T") 的PV量为： $count"
 			[ "$num" -eq 2 ] && echo "$date 这个时刻的访问量为： $count"
+			return 0
 		fi
 		
 		if [[ "$command_type" == "pv" && "$num" -eq 3  ]];then
 			local count=$(awk '{str=$4; sub(/\[/,"",str); if(str<="'''$end_date'''" && str>="'''$start_date'''") print $0}' $log_path|wc -l)
         echo "从$start_date到$end_date的PV量为： $count"			
+			return 0
 		fi
 #	--------------------------------IP_TOP-------------------------
-		if [[ "$command_type" == "ip" && "$num" -lt 3  ]];then
-			local result=$(grep "$date" $log_path|awk '{ips[$1]++ } END{for(ip in ips) print ip,ips[ip]}' | sort -k2 -rn)
+		local top_num="$command_type"
+              top_num="${command_type#ip}"
+		[ -z $top_num ] && top_num=10000
+
+		if [[ "$command_type" =~ "ip" && "$num" -lt 3  ]];then
+			local result=$(grep "$date" $log_path|awk '{ips[$1]++} END{num=1;for(ip in ips)if(num<='''$top_num'''){print ip,ips[ip];num++}}' | sort -k2 -rn)
 			[ "$num" -eq 1 ] && echo -e "今日截止$date:$(date +"%T")访问最多的几个ip是:\n$result"  
             [ "$num" -eq 2 ] && echo -e "$date 这个时刻,访问最多的几个ip是:\n$result"
 		fi
 		
-		if [[ "$command_type" == "ip" && "$num" -eq 3  ]];then
-            echo "执行了"
+		if [[ "$command_type" =~ "ip" && "$num" -eq 3  ]];then
             local result=$(awk '
 				{str=$4; sub(/\[/,"",str);if(str<="'''$end_date'''" && str>="'''$start_date'''") ips[$1]++}
-				END{ for(ip in ips) print ip,ips[ip]}
+				END{num=1; for(ip in ips)if(num<='''$top_num'''){ print ip,ips[ip];num++}}
 				' $log_path  |sort -k2 -rn)
         	echo  -e "从$start_date到$end_date访问最多的几个ip是：\n$result"            
         fi	
