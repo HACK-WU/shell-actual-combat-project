@@ -22,6 +22,36 @@ function changeToENG {
 	esac
 }
 function daily_pv {				#统计指定日期的PV量
+	function exe {
+#	------------------------------PV------------------------------
+		if [[ "$command_type" == "pv" && "$num" -lt 3  ]];then		#
+			local count=$(grep "$date" $log_path|wc -l)
+			[ "$num" -eq 1 ] && echo "今日截止$date:$(date +"%T") 的PV量为： $count"
+			[ "$num" -eq 2 ] && echo "$date 这个时刻的访问量为： $count"
+		fi
+		
+		if [[ "$command_type" == "pv" && "$num" -eq 3  ]];then
+			local count=$(awk '{str=$4; sub(/\[/,"",str); if(str<="'''$end_date'''" && str>="'''$start_date'''") print $0}' $log_path|wc -l)
+        echo "从$start_date到$end_date的PV量为： $count"			
+		fi
+#	--------------------------------IP_TOP-------------------------
+		if [[ "$command_type" == "ip" && "$num" -lt 3  ]];then
+			local result=$(grep "$date" $log_path|awk '{ips[$1]++ } END{for(ip in ips) print ip,ips[ip]}' | sort -k2 -rn)
+			[ "$num" -eq 1 ] && echo -e "今日截止$date:$(date +"%T")访问最多的几个ip是:\n$result"  
+            [ "$num" -eq 2 ] && echo -e "$date 这个时刻,访问最多的几个ip是:\n$result"
+		fi
+		
+		if [[ "$command_type" == "ip" && "$num" -eq 3  ]];then
+            echo "执行了"
+            local result=$(awk '
+				{str=$4; sub(/\[/,"",str);if(str<="'''$end_date'''" && str>="'''$start_date'''") ips[$1]++}
+				END{ for(ip in ips) print ip,ips[ip]}
+				' $log_path  |sort -k2 -rn)
+        	echo  -e "从$start_date到$end_date访问最多的几个ip是：\n$result"            
+        fi	
+
+	}
+		
 	echo -e "\033[33m"
   	read -p "please input a or two  date (09/Jul/2020:10:12:07): "  dates
 	echo "------------------------------------------------------------"
@@ -32,28 +62,31 @@ function daily_pv {				#统计指定日期的PV量
 	local num=0
 	for item in $dates
 	do
-		local date_array[++num]=$item
+		local date_array[num++]=$item
 	done
 	case $num in
-	0)						#默认状态，没有写入参数
+	0)
+		echo "请输入ip或者pv："
+		;;
+	1)						#默认状态，没有写入参数
+		local command_type="${date_array[0]}"
 		local date="$Day/$Mon/$Year"
-        local count=$(grep "$date" $log_path|wc -l) 
-		echo "目前今日的PV量为： $count"
+		exe	
 	 	;;
-	1) 						#写入了一个参数
-		local date=$dates
-		local count=$(grep "$date" $log_path | wc -l)
-		echo "$date 这个时刻的访问量为： $count"
+	2) 						#写入了一个参数
+		local command_type="${date_array[0]}"
+		local date=${date_array[1]}
+		exe
 		;;
 
-	2) 						#写入了两个参数
+	3) 						#写入了两个参数
+		local command_type="${date_array[0]}"
 		local start_date=${date_array[1]}
 		local end_date=${date_array[2]}
-		local count=$(awk '{str=$4; sub(/\[/,"",str); if(str<="'''$end_date'''" && str>="'''$start_date'''") print $0}' $log_path|wc -l) 		     	
-		echo "从$start_date到$end_date的PV量为： $count"	
+		exe
 		;;	
 	*) 						#参数过多
-		echo "参数过多，最多支持两个!!!!"
+		echo "参数过多，最多支持三个!!!!"
 		sleep 1
 		return 1
 		;;
